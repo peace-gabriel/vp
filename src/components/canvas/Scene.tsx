@@ -1,7 +1,6 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { Canvas } from '@react-three/fiber';
-import { OrbitControls, Environment, ContactShadows } from '@react-three/drei';
-import { Physics, RigidBody } from '@react-three/rapier';
+import { OrbitControls, Environment } from '@react-three/drei';
 import Piano from './Piano';
 import NoteColumns from './NoteColumns';
 import type { PlayedNote } from './NoteColumns';

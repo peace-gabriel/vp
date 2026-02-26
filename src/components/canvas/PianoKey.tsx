@@ -13,7 +13,7 @@ interface KeyProps {
 }
 
 const PianoKey: React.FC<KeyProps> = ({
-    note, isBlack, position, isPressed,
+    isBlack, position, isPressed,
     onPointerDown, onPointerUp, onPointerLeave
 }) => {
     const meshRef = useRef<THREE.Mesh>(null);
@@ -30,7 +30,7 @@ const PianoKey: React.FC<KeyProps> = ({
     // Animation target
     const targetRotationX = isPressed ? 0.05 : 0;
 
-    useFrame((state, delta) => {
+    useFrame((_, delta) => {
         if (meshRef.current) {
             // Smoothly animate key press
             meshRef.current.rotation.x = THREE.MathUtils.lerp(

@@ -17,7 +17,6 @@ interface SculpturePieceProps {
 const SculpturePiece: React.FC<SculpturePieceProps> = ({ piece, audioData, progress, revealed, gravityStrength, explosionForce, onBodyCreated }) => {
     const bodyRef = useRef<RapierRigidBody>(null);
     const targetVec = useMemo(() => new THREE.Vector3(...piece.targetPos), [piece.targetPos]);
-    const lastBeatTime = useRef(0);
 
     const geometry = useMemo(() => new THREE.BoxGeometry(1, 1, 1), []);
 
@@ -36,7 +35,7 @@ const SculpturePiece: React.FC<SculpturePieceProps> = ({ piece, audioData, progr
         metalness: 0.8
     }), [piece.id]);
 
-    useFrame((state, delta) => {
+    useFrame((_, delta) => {
         if (!bodyRef.current || revealed) return;
 
         const { bass, mid, treble } = audioData.current;

@@ -37,6 +37,8 @@ const Overlay: React.FC<OverlayProps> = ({
     spikeColor, onSpikeColorChange,
     onUploadAudio
 }) => {
+    void onUploadAudio;
+
     const getStored = <T,>(key: string, fallback: T): T => {
         const stored = localStorage.getItem(`vp_${key}`);
         if (stored !== null) {

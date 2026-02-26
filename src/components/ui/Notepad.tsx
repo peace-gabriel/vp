@@ -11,8 +11,8 @@ const Notepad: React.FC<NotepadProps> = ({ onClose }) => {
     const [speed, setSpeed] = useState(0.05); // user-requested default multiplier
     const [fontFamily, setFontFamily] = useState<string>('monospace');
     const scrollContainerRef = useRef<HTMLDivElement>(null);
-    const requestRef = useRef<number>();
-    const lastTimeRef = useRef<number>();
+    const requestRef = useRef<number | undefined>(undefined);
+    const lastTimeRef = useRef<number | undefined>(undefined);
 
     const handlePlayPause = () => {
         setIsPlaying(!isPlaying);

@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useRef } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import Scene from './components/canvas/Scene';
 import Overlay from './components/ui/Overlay';
 import Notepad from './components/ui/Notepad';
@@ -210,7 +210,7 @@ function App() {
             minDistance={10}
             maxDistance={80}
           />
-          <EffectComposer disableNormalPass>
+          <EffectComposer enableNormalPass={false}>
             <Bloom luminanceThreshold={0.2} mipmapBlur intensity={bloomIntensity} />
             <ChromaticAberration
               blendFunction={BlendFunction.NORMAL}

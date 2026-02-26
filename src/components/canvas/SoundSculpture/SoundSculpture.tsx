@@ -1,8 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import * as THREE from 'three';
-import { PositionalAudio, Html } from '@react-three/drei';
 import { useFrame, useThree } from '@react-three/fiber';
-import { Physics, RigidBody } from '@react-three/rapier';
+import { Physics, RigidBody, type RapierRigidBody } from '@react-three/rapier';
 import { useAudioAnalyser } from '../../../hooks/useAudioAnalyser';
 import { sculpturePieces } from './config';
 import SculpturePiece from './SculpturePiece';
@@ -15,7 +14,7 @@ interface SoundSculptureProps {
     explosionForce: number;
 }
 
-const SoundSculpture: React.FC<SoundSculptureProps> = ({ musicUrl, cameraDistance, gravityStrength, explosionForce }) => {
+const SoundSculpture: React.FC<SoundSculptureProps> = ({ musicUrl: _musicUrl, cameraDistance, gravityStrength, explosionForce }) => {
     const { audioDataRef } = useAudioAnalyser();
     const [revealed, setRevealed] = useState(false);
 

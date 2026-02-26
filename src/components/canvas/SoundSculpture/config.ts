@@ -1,5 +1,3 @@
-import React from 'react';
-
 export interface PieceConfig {
     id: number;
     targetPos: [number, number, number];
