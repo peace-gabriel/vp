@@ -5,7 +5,8 @@ A 3D virtual piano built with React Three Fiber, Rapier Physics, and Tone.js. Pl
 ## Features
 
 *   **Interactive 3D Piano Scene**: A playable 3D piano built with `@react-three/fiber` and `@react-three/drei`.
-*   **Piano Audio Engine**: Powered by `Tone.js` and `SpessaSynth`, with Salamander Grand, emulated felt/studio presets, free SoundFont sources, and custom `.sf2`/`.sf3` SoundFont loading.
+*   **Piano Audio Engine**: Powered by `Tone.js` and `SpessaSynth`, with Salamander Grand, emulated felt/studio presets, free SoundFont sources, pro effects, and custom `.sf2`/`.sf3` SoundFont loading.
+*   **2D Stage VJ Mode**: Lightweight reactive piano-roll visuals with Clean, Cyber Stage, Aurora, and Pixel Rain modes.
 *   **Sound Sculpture Mode**: A dynamic audio-reactive 3D physics environment.
 *   **Advanced Audio Controls**: Real-time control over volume, reverb, Studio Mode, transposition, sustain, and instrument selection.
 *   **Interactive UI**: Overlay controls plus a draggable, resizable notepad for chords and lyrics.
@@ -49,13 +50,16 @@ The instrument selector includes fast-loading free piano presets from:
 
 *   Salamander Grand Piano samples hosted by Tone.js.
 *   FluidR3, MusyngKite, and FatBoy presets hosted by `gleitz/midi-js-soundfonts`.
-*   Extra lightweight FluidR3 instruments for different colors: DX electric piano, harpsichord, clavinet, celesta, music box, vibraphone, warm pad, and synth strings.
+*   Extra lightweight FluidR3 instruments for different colors: DX electric piano, harpsichord, clavinet, celesta, music box, vibraphone, warm pad, synth strings, string ensemble, choir, New Age pad, PolySynth pad, and Crystal FX.
+*   Extra MusyngKite remote instruments: DX electric piano and New Age pad.
 *   Lightweight emulated soft/felt variants such as Hakurei Pure, Hakurei Felt, Nocturne Felt, and Velvet Soft.
 *   FreePats Upright Piano KW local samples (`CC0-1.0`) in `public/soundfonts/upright-kw-small/` and `public/soundfonts/upright-kw-bright/`.
 *   FreePats Old Piano FB local samples (`CC0-1.0`) in `public/soundfonts/old-piano-fb/`.
 *   Local `.sf2` / `.sf3` files can still be loaded through SpessaSynth, with a fallback to Hakurei Felt if the browser rejects or times out while importing the bank.
 
-The filter selector can reshape any instrument with lightweight Web Audio presets: Natural, Felt Dark, Bright Glass, Tape Warm, Lo-Fi Room, Dream Hall, and Wide Chorus.
+The filter selector can reshape any instrument with lightweight Web Audio presets, including the original color modes plus Pro Studio Clean, Pro Close Mic, Pro Soft Felt, Pro Warm Console, Pro Presence Lift, Pro Plate Space, Pro Cinematic Wide, Pro Analog Echo, Pro Night Room, Pro Sparkle Air, Pro Master Bus, Pro Felt Cloud, Pro EP Wide Clean, and Pro Tape Plate.
+
+Pro filters use the existing Tone.js chain plus generated in-memory convolution impulses, stereo width, multiband compression, and per-preset velocity/release shaping. No impulse WAVs are committed, so the Vercel Hobby static upload size stays focused on existing local soundfonts.
 
 To add more local soundfonts, use the `+ Load .SF2/.SF3 File` option in the overlay. Built-in web presets are mapped in `src/audio/PianoEngine.ts`.
 
@@ -71,6 +75,7 @@ Recommended full-quality SF2 sources:
 *   **Physics Engine**: `@react-three/rapier`
 *   **Post-Processing**: `@react-three/postprocessing`
 *   **Audio Synthesis**: `tone.js`, `spessasynth_lib`
+*   **UI Animation**: `motion`
 *   **Build Tool**: Vite
 *   **Styling**: Vanilla CSS
 

@@ -1,6 +1,22 @@
 import React, { useState } from 'react';
 import { audioEngine } from '../../audio/PianoEngine';
 import { Box, PanelsTopLeft, Play, SlidersHorizontal, Sparkles } from 'lucide-react';
+import { AnimatePresence, motion } from 'motion/react';
+
+type VjMode = 'clean' | 'cyber' | 'aurora' | 'pixel-rain';
+
+const FX_MODE_OPTIONS: Array<{ id: VjMode; name: string }> = [
+    { id: 'clean', name: 'Clean' },
+    { id: 'cyber', name: 'Cyber Stage' },
+    { id: 'aurora', name: 'Aurora' },
+    { id: 'pixel-rain', name: 'Pixel Rain' }
+];
+
+const buttonMotion = {
+    whileHover: { y: -1, scale: 1.015 },
+    whileTap: { y: 1, scale: 0.985 },
+    transition: { duration: 0.14 }
+};
 
 interface OverlayProps {
     onStart: () => void;
@@ -24,6 +40,12 @@ interface OverlayProps {
     onSpikeColorChange: (val: string) => void;
     visualMode: '2d' | '3d';
     onToggleVisualMode: () => void;
+    vjEnabled: boolean;
+    onToggleVj: () => void;
+    vjIntensity: number;
+    onVjIntensityChange: (val: number) => void;
+    vjMode: VjMode;
+    onVjModeChange: (val: VjMode) => void;
     onUploadAudio: (url: string) => void;
 }
 
@@ -38,6 +60,9 @@ const Overlay: React.FC<OverlayProps> = ({
     spikeColorMode, onSpikeColorModeChange,
     spikeColor, onSpikeColorChange,
     visualMode, onToggleVisualMode,
+    vjEnabled, onToggleVj,
+    vjIntensity, onVjIntensityChange,
+    vjMode, onVjModeChange,
     onUploadAudio
 }) => {
     void onUploadAudio;
@@ -94,6 +119,8 @@ const Overlay: React.FC<OverlayProps> = ({
 
         const storedSpikeColor = getStored('spikeColor', '#00ffff');
         if (storedSpikeColor !== spikeColor) onSpikeColorChange(storedSpikeColor);
+        // Settings above are intentionally hydrated once from localStorage on mount.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     const handleStart = async () => {
@@ -160,6 +187,15 @@ const Overlay: React.FC<OverlayProps> = ({
         e.target.blur();
     };
 
+    const handleVjIntensityChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        onVjIntensityChange(parseFloat(e.target.value));
+    };
+
+    const handleVjModeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        onVjModeChange(e.target.value as VjMode);
+        e.target.blur();
+    };
+
     const handleSoundfontChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
         const val = e.target.value;
         setSoundfont(val);
@@ -202,16 +238,29 @@ const Overlay: React.FC<OverlayProps> = ({
     if (!started) {
         return (
             <div className="ui-container start-screen">
-                <button className="btn" onClick={handleStart} disabled={starting} style={{ padding: '1rem 2rem', fontSize: '1.25rem' }}>
+                <motion.button
+                    className="btn"
+                    onClick={handleStart}
+                    disabled={starting}
+                    style={{ padding: '1rem 2rem', fontSize: '1.25rem' }}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    {...buttonMotion}
+                >
                     <Play size={24} /> {starting ? 'Loading Piano...' : 'Start Virtual Piano'}
-                </button>
+                </motion.button>
             </div>
         );
     }
 
     return (
         <div className="ui-container">
-            <div className="panel control-panel">
+            <motion.div
+                className="panel control-panel"
+                initial={{ opacity: 0, y: -16, filter: 'blur(8px)' }}
+                animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+                transition={{ duration: 0.28, ease: 'easeOut' }}
+            >
                 <div className="control-section">
                     <div className="control-group">
                         <label>Volume</label>
@@ -252,19 +301,77 @@ const Overlay: React.FC<OverlayProps> = ({
                             onChange={handleTransposeChange}
                         />
                     </div>
-                    <button
+                    <motion.button
                         className={`btn compact-toggle ${studioMode ? 'active' : ''}`}
                         onClick={handleStudioToggle}
+                        animate={{
+                            boxShadow: studioMode ? '0 0 22px rgba(45, 212, 191, 0.2)' : '0 0 0 rgba(0,0,0,0)'
+                        }}
+                        {...buttonMotion}
                     >
                         <Sparkles size={16} /> Studio
-                    </button>
-                    <button
+                    </motion.button>
+                    <motion.button
                         className={`btn compact-toggle ${visualMode === '2d' ? 'active' : ''}`}
                         onClick={onToggleVisualMode}
+                        animate={{
+                            boxShadow: visualMode === '2d' ? '0 0 22px rgba(56, 189, 248, 0.2)' : '0 0 0 rgba(0,0,0,0)'
+                        }}
+                        {...buttonMotion}
                     >
                         {visualMode === '2d' ? <PanelsTopLeft size={16} /> : <Box size={16} />}
                         {visualMode === '2d' ? '2D' : '3D'}
-                    </button>
+                    </motion.button>
+                    <AnimatePresence initial={false}>
+                        {visualMode === '2d' && (
+                            <motion.div
+                                className="vj-controls"
+                                key="vj-controls"
+                                initial={{ opacity: 0, x: -8 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                exit={{ opacity: 0, x: -8 }}
+                                transition={{ duration: 0.18 }}
+                            >
+                                <motion.button
+                                    type="button"
+                                className={`btn compact-toggle ${vjEnabled ? 'active' : ''}`}
+                                onClick={onToggleVj}
+                                    animate={{
+                                        scale: vjEnabled ? 1 : 0.98,
+                                        boxShadow: vjEnabled ? '0 0 24px rgba(255, 72, 208, 0.18)' : '0 0 0 rgba(0,0,0,0)'
+                                    }}
+                                    {...buttonMotion}
+                            >
+                                VJ
+                                </motion.button>
+                                <div className="control-group vj-intensity-control">
+                                    <label>Intensity</label>
+                                    <input
+                                        type="range"
+                                        min="0"
+                                        max="1"
+                                        step="0.05"
+                                        value={vjIntensity}
+                                        onChange={handleVjIntensityChange}
+                                        disabled={!vjEnabled}
+                                    />
+                                </div>
+                                <div className="control-group">
+                                    <label>FX Mode</label>
+                                    <select
+                                        value={vjMode}
+                                        onChange={handleVjModeChange}
+                                        className="select-control fx-select"
+                                        disabled={!vjEnabled}
+                                    >
+                                        {FX_MODE_OPTIONS.map((mode) => (
+                                            <option key={mode.id} value={mode.id}>{mode.name}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
                 </div>
 
                 <div className="panel-divider" />
@@ -307,12 +414,19 @@ const Overlay: React.FC<OverlayProps> = ({
                         </div>
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                        <button className={`btn compact-toggle ${sculptureMode ? 'active' : ''}`} onClick={onToggleSculptureMode}>
+                        <motion.button className={`btn compact-toggle ${sculptureMode ? 'active' : ''}`} onClick={onToggleSculptureMode} {...buttonMotion}>
                             {sculptureMode ? 'Piano Mode' : 'Sculpture'}
-                        </button>
+                        </motion.button>
                     </div>
+                    <AnimatePresence initial={false}>
                     {sculptureMode && (
-                        <div style={{ display: 'flex', gap: '1rem', borderLeft: '1px solid rgba(255,255,255,0.2)', paddingLeft: '1rem' }}>
+                        <motion.div
+                            style={{ display: 'flex', gap: '1rem', borderLeft: '1px solid rgba(255,255,255,0.2)', paddingLeft: '1rem' }}
+                            initial={{ opacity: 0, width: 0 }}
+                            animate={{ opacity: 1, width: 'auto' }}
+                            exit={{ opacity: 0, width: 0 }}
+                            transition={{ duration: 0.2 }}
+                        >
                             <div className="control-group">
                                 <label>Type</label>
                                 <select
@@ -424,13 +538,14 @@ const Overlay: React.FC<OverlayProps> = ({
                                     </div>
                                 </>
                             )}
-                        </div>
+                        </motion.div>
                     )}
-                    <button className="btn" onClick={onOpenNotepad} style={{ marginLeft: 'auto' }}>
+                    </AnimatePresence>
+                    <motion.button className="btn" onClick={onOpenNotepad} style={{ marginLeft: 'auto' }} {...buttonMotion}>
                         Open Notepad
-                    </button>
+                    </motion.button>
                 </div>
-            </div>
+            </motion.div>
         </div>
     );
 };

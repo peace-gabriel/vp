@@ -16,6 +16,8 @@ import { audioEngine } from './audio/PianoEngine';
 import type { PlayedNote } from './components/canvas/NoteColumns';
 import './index.css';
 
+type VjMode = 'clean' | 'cyber' | 'aurora' | 'pixel-rain';
+
 function App() {
   const [started, setStarted] = useState(false);
   const [showNotepad, setShowNotepad] = useState(false);
@@ -23,6 +25,31 @@ function App() {
   const [visualMode, setVisualMode] = useState<'2d' | '3d'>(() => {
     const stored = localStorage.getItem('vp_visualMode');
     return stored === '3d' ? '3d' : '2d';
+  });
+  const [vjEnabled, setVjEnabled] = useState<boolean>(() => {
+    const stored = localStorage.getItem('vp_vjEnabled');
+    if (stored === null) return true;
+    try {
+      return JSON.parse(stored);
+    } catch {
+      return true;
+    }
+  });
+  const [vjIntensity, setVjIntensity] = useState<number>(() => {
+    const stored = localStorage.getItem('vp_vjIntensity');
+    if (stored === null) return 0.72;
+    try {
+      const parsed = Number(JSON.parse(stored));
+      return Number.isFinite(parsed) ? Math.min(1, Math.max(0, parsed)) : 0.72;
+    } catch {
+      return 0.72;
+    }
+  });
+  const [vjMode, setVjMode] = useState<VjMode>(() => {
+    const stored = localStorage.getItem('vp_vjMode');
+    return stored === 'clean' || stored === 'aurora' || stored === 'pixel-rain' || stored === 'cyber'
+      ? stored
+      : 'cyber';
   });
   const [sculptureType, setSculptureType] = useState<'cubes' | 'sphere' | 'stars'>('cubes');
   const [bloomIntensity, setBloomIntensity] = useState(1.5);
@@ -202,6 +229,22 @@ function App() {
           setVisualMode(next);
           localStorage.setItem('vp_visualMode', next);
         }}
+        vjEnabled={vjEnabled}
+        onToggleVj={() => {
+          const next = !vjEnabled;
+          setVjEnabled(next);
+          localStorage.setItem('vp_vjEnabled', JSON.stringify(next));
+        }}
+        vjIntensity={vjIntensity}
+        onVjIntensityChange={(value) => {
+          setVjIntensity(value);
+          localStorage.setItem('vp_vjIntensity', JSON.stringify(value));
+        }}
+        vjMode={vjMode}
+        onVjModeChange={(value) => {
+          setVjMode(value);
+          localStorage.setItem('vp_vjMode', value);
+        }}
         onUploadAudio={() => { }} // Now unused but kept for prop satisfaction or future use
       />
       {started && showNotepad && <Notepad onClose={() => setShowNotepad(false)} />}
@@ -210,6 +253,9 @@ function App() {
         <PianoRoll2D
           activeNotes={activeNotes}
           playedNotes={playedNotes}
+          vjEnabled={vjEnabled}
+          vjIntensity={vjIntensity}
+          vjMode={vjMode}
           onPlayNote={handlePlayNote}
           onReleaseNote={handleReleaseNote}
         />

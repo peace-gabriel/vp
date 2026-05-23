@@ -169,6 +169,21 @@ input[type="checkbox"] {
   min-width: 142px;
 }
 
+.fx-select {
+  min-width: 132px;
+}
+
+.vj-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  flex-wrap: wrap;
+}
+
+.vj-intensity-control input:disabled {
+  opacity: 0.42;
+}
+
 .file-link {
   cursor: pointer;
   font-size: 0.7rem;
@@ -185,6 +200,29 @@ input[type="checkbox"] {
     linear-gradient(180deg, #050813 0%, #071322 45%, #05070d 100%);
 }
 
+.piano-roll-2d.vj-on {
+  background:
+    linear-gradient(180deg, #040711 0%, #061626 46%, #05070d 100%);
+}
+
+.piano-roll-2d.vj-mode-clean {
+  background:
+    linear-gradient(180deg, #050813 0%, #071322 45%, #05070d 100%);
+}
+
+.piano-roll-2d.vj-mode-aurora.vj-on {
+  background:
+    radial-gradient(circle at 16% 22%, rgba(53, 232, 123, 0.16), transparent 28%),
+    radial-gradient(circle at 82% 30%, rgba(255, 72, 208, 0.13), transparent 28%),
+    linear-gradient(180deg, #050713 0%, #081527 48%, #05070d 100%);
+}
+
+.piano-roll-2d.vj-mode-pixel-rain.vj-on {
+  background:
+    linear-gradient(90deg, rgba(53, 232, 123, 0.06), transparent 24%, rgba(40, 215, 255, 0.07), transparent 72%, rgba(255, 72, 208, 0.05)),
+    linear-gradient(180deg, #03060d 0%, #091121 54%, #04060a 100%);
+}
+
 .roll-glow {
   position: absolute;
   inset: 0;
@@ -192,6 +230,35 @@ input[type="checkbox"] {
   background:
     linear-gradient(90deg, rgba(40, 215, 255, 0.08), transparent 22%, rgba(255, 72, 208, 0.07) 50%, transparent 78%, rgba(53, 232, 123, 0.08)),
     linear-gradient(180deg, rgba(255, 255, 255, 0.04), transparent 35%);
+}
+
+.vj-stage-wash {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: var(--vj-pulse, 0);
+  background:
+    linear-gradient(90deg, rgba(53, 232, 123, 0.14), transparent 24%, rgba(40, 215, 255, 0.16), transparent 74%, rgba(255, 72, 208, 0.14)),
+    repeating-linear-gradient(180deg, rgba(255, 255, 255, 0.035) 0 1px, transparent 1px 9px);
+  mix-blend-mode: screen;
+}
+
+.vj-mode-clean .vj-stage-wash {
+  opacity: 0;
+}
+
+.vj-mode-aurora .vj-stage-wash {
+  background:
+    linear-gradient(110deg, rgba(53, 232, 123, 0.12), transparent 24%, rgba(40, 215, 255, 0.18), transparent 58%, rgba(255, 72, 208, 0.13)),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.025), transparent 48%);
+  filter: blur(0.4px);
+}
+
+.vj-mode-pixel-rain .vj-stage-wash {
+  background:
+    repeating-linear-gradient(90deg, rgba(125, 249, 255, 0.04) 0 1px, transparent 1px 15px),
+    repeating-linear-gradient(180deg, rgba(255, 255, 255, 0.035) 0 1px, transparent 1px 7px),
+    linear-gradient(90deg, rgba(53, 232, 123, 0.1), transparent 34%, rgba(255, 72, 208, 0.08));
 }
 
 .roll-lanes {
@@ -211,12 +278,61 @@ input[type="checkbox"] {
   transform-origin: center bottom;
 }
 
+.vj-mode-aurora .roll-lanes {
+  background-image:
+    linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.032) 1px, transparent 1px);
+}
+
+.vj-mode-pixel-rain .roll-lanes {
+  background-image:
+    linear-gradient(90deg, rgba(125, 249, 255, 0.052) 1px, transparent 1px),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+    repeating-linear-gradient(90deg, rgba(53, 232, 123, 0.025) 0 2px, transparent 2px 28px);
+}
+
+.vj-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1;
+  mix-blend-mode: screen;
+}
+
+.vj-lane-energy {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  opacity: var(--vj-pulse, 0);
+  background:
+    linear-gradient(90deg, rgba(53, 232, 123, 0.18), transparent 32%),
+    linear-gradient(90deg, transparent 30%, rgba(40, 215, 255, 0.2), transparent 70%),
+    linear-gradient(90deg, transparent 60%, rgba(255, 72, 208, 0.18));
+}
+
+.vj-mode-aurora .vj-lane-energy {
+  background:
+    linear-gradient(115deg, rgba(53, 232, 123, 0.16), transparent 30%),
+    linear-gradient(75deg, transparent 24%, rgba(40, 215, 255, 0.18), transparent 72%),
+    linear-gradient(145deg, transparent 55%, rgba(255, 72, 208, 0.14));
+}
+
+.vj-mode-pixel-rain .vj-lane-energy {
+  background:
+    repeating-linear-gradient(90deg, rgba(53, 232, 123, 0.1) 0 1px, transparent 1px 22px),
+    linear-gradient(90deg, rgba(40, 215, 255, 0.16), transparent 45%, rgba(255, 72, 208, 0.12));
+}
+
 .roll-lane-line {
   position: absolute;
   top: 0;
   bottom: 0;
   width: 1px;
   background: rgba(255, 255, 255, 0.035);
+  z-index: 2;
 }
 
 .roll-hit-line {
@@ -227,6 +343,16 @@ input[type="checkbox"] {
   height: 2px;
   background: linear-gradient(90deg, transparent, rgba(93, 241, 255, 0.88), transparent);
   box-shadow: 0 0 14px rgba(93, 241, 255, 0.48);
+  z-index: 3;
+}
+
+.vj-on .roll-hit-line {
+  height: 3px;
+  background:
+    linear-gradient(90deg, transparent, rgba(53, 232, 123, 0.82), rgba(40, 215, 255, 0.96), rgba(255, 72, 208, 0.82), transparent);
+  box-shadow:
+    0 0 16px rgba(93, 241, 255, 0.58),
+    0 0 38px rgba(255, 72, 208, 0.22);
 }
 
 .roll-note {
@@ -238,12 +364,29 @@ input[type="checkbox"] {
     linear-gradient(90deg, rgba(255, 255, 255, 0.18), transparent 18%, transparent 82%, rgba(255, 255, 255, 0.12)),
     var(--note-color);
   box-shadow:
-    0 0 18px color-mix(in srgb, var(--note-color), transparent 58%),
+    0 0 var(--note-glow, 18px) color-mix(in srgb, var(--note-color), transparent 50%),
     inset 0 0 0 1px rgba(255, 255, 255, 0.24);
+  filter: saturate(var(--note-saturate, 1)) brightness(var(--note-brightness, 1));
+  z-index: 4;
 }
 
 .roll-note-black {
   filter: saturate(1.15) brightness(1.08);
+}
+
+.vj-mode-aurora .roll-note {
+  border-radius: 8px;
+  box-shadow:
+    0 0 calc(var(--note-glow, 18px) * 0.75) color-mix(in srgb, var(--note-color), transparent 46%),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.2);
+}
+
+.vj-mode-pixel-rain .roll-note {
+  border-radius: 3px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.32), transparent 16%),
+    repeating-linear-gradient(180deg, rgba(255, 255, 255, 0.12) 0 1px, transparent 1px 7px),
+    var(--note-color);
 }
 
 .piano-2d {
@@ -256,6 +399,13 @@ input[type="checkbox"] {
   overflow: hidden;
   background: #080a10;
   box-shadow: 0 -12px 34px rgba(0, 0, 0, 0.48), 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+
+.vj-on .piano-2d {
+  box-shadow:
+    0 -12px 34px rgba(0, 0, 0, 0.48),
+    0 -10px 32px rgba(40, 215, 255, 0.12),
+    0 0 0 1px rgba(255, 255, 255, 0.1);
 }
 
 .white-key-row {
@@ -286,7 +436,12 @@ input[type="checkbox"] {
 }
 
 .white-key.active {
-  background: linear-gradient(180deg, #baf7ff 0%, #82d6f0 72%, #4caac9 100%);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.62), transparent 28%),
+    linear-gradient(180deg, color-mix(in srgb, var(--key-color), white 54%) 0%, color-mix(in srgb, var(--key-color), white 28%) 72%, color-mix(in srgb, var(--key-color), black 12%) 100%);
+  box-shadow:
+    inset 0 -16px 22px rgba(42, 54, 71, 0.18),
+    inset 0 0 22px color-mix(in srgb, var(--key-color), transparent 48%);
 }
 
 .black-key {
@@ -301,8 +456,23 @@ input[type="checkbox"] {
 }
 
 .black-key.active {
-  background: linear-gradient(180deg, #2c3443 0%, #111b2a 74%, #0a0e16 100%);
-  box-shadow: 0 0 18px rgba(125, 249, 255, 0.38);
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--key-color), #111 34%) 0%, #111b2a 74%, #0a0e16 100%);
+  box-shadow:
+    0 0 20px color-mix(in srgb, var(--key-color), transparent 34%),
+    0 10px 15px rgba(0, 0, 0, 0.4);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .vj-stage-wash,
+  .vj-lane-energy,
+  .vj-canvas {
+    opacity: 0.34;
+  }
+
+  .roll-note {
+    filter: none;
+  }
 }
 
 @media (max-width: 860px) {

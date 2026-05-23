@@ -35,7 +35,17 @@ type AudioFilterPreset = {
     chorusDepth: number;
     distortionWet: number;
     distortionAmount: number;
+    width?: number;
+    impulse?: ImpulseProfile;
+    convolverWet?: number;
+    multibandAmount?: number;
+    velocityCurve?: number;
+    velocityGain?: number;
+    humanize?: number;
+    releaseDelay?: number;
 };
+
+type ImpulseProfile = 'none' | 'room' | 'plate' | 'hall';
 
 type BrowserAudioWindow = Window & typeof globalThis & {
     webkitAudioContext?: typeof AudioContext;
@@ -137,6 +147,10 @@ class PianoAudioEngine {
     private distortion: Tone.Distortion | null = null;
     private chorus: Tone.Chorus | null = null;
     private delay: Tone.FeedbackDelay | null = null;
+    private widener: Tone.StereoWidener | null = null;
+    private multibandCompressor: Tone.MultibandCompressor | null = null;
+    private convolver: Tone.Convolver | null = null;
+    private convolverGain: Tone.Gain | null = null;
     private limiter: Tone.Limiter | null = null;
     public spessaSynth: WorkletSynthesizer | null = null;
     public spessaContext: AudioContext | null = null;
@@ -156,6 +170,11 @@ class PianoAudioEngine {
     private currentEqConfig = { low: 0, mid: 1, high: 2 };
     private currentFilterFrequency = 20000;
     private currentFilterPresetId = 'natural';
+    private currentImpulseProfile: ImpulseProfile = 'room';
+    private currentVelocityCurve = 0.88;
+    private currentVelocityGain = 0.98;
+    private currentHumanize = 0.12;
+    private currentReleaseDelay = 0.1;
     private isSustainPedalDown = false;
     private isSustainToggleOn = false;
     private sustainedNotes: Set<string> = new Set(); // Internal notes waiting to be released
@@ -371,12 +390,90 @@ class PianoAudioEngine {
             release: 2.6
         },
         {
+            id: 'fluid-new-age-pad',
+            name: 'FluidR3 New Age Pad (Remote)',
+            baseUrl: 'https://gleitz.github.io/midi-js-soundfonts/FluidR3_GM/pad_1_new_age-mp3/',
+            urls: MIDI_JS_PIANO_URLS,
+            license: 'CC-BY-3.0',
+            eq: { low: 0, mid: -2, high: 2 },
+            filterFrequency: 6200,
+            attack: 0.12,
+            release: 3.4
+        },
+        {
+            id: 'fluid-polysynth-pad',
+            name: 'FluidR3 PolySynth Pad (Remote)',
+            baseUrl: 'https://gleitz.github.io/midi-js-soundfonts/FluidR3_GM/pad_3_polysynth-mp3/',
+            urls: MIDI_JS_PIANO_URLS,
+            license: 'CC-BY-3.0',
+            eq: { low: 1, mid: -1, high: 1 },
+            filterFrequency: 7000,
+            attack: 0.09,
+            release: 2.8
+        },
+        {
+            id: 'fluid-crystal',
+            name: 'FluidR3 Crystal FX (Remote)',
+            baseUrl: 'https://gleitz.github.io/midi-js-soundfonts/FluidR3_GM/fx_3_crystal-mp3/',
+            urls: MIDI_JS_PIANO_URLS,
+            license: 'CC-BY-3.0',
+            eq: { low: -5, mid: -1, high: 7 },
+            filterFrequency: 15000,
+            attack: 0.004,
+            release: 2.9
+        },
+        {
+            id: 'fluid-choir',
+            name: 'FluidR3 Choir Aahs (Remote)',
+            baseUrl: 'https://gleitz.github.io/midi-js-soundfonts/FluidR3_GM/choir_aahs-mp3/',
+            urls: MIDI_JS_PIANO_URLS,
+            license: 'CC-BY-3.0',
+            eq: { low: -1, mid: 0, high: 2 },
+            filterFrequency: 9000,
+            attack: 0.08,
+            release: 2.8
+        },
+        {
+            id: 'fluid-string-ensemble',
+            name: 'FluidR3 String Ensemble (Remote)',
+            baseUrl: 'https://gleitz.github.io/midi-js-soundfonts/FluidR3_GM/string_ensemble_1-mp3/',
+            urls: MIDI_JS_PIANO_URLS,
+            license: 'CC-BY-3.0',
+            eq: { low: 1, mid: -1, high: 1 },
+            filterFrequency: 8500,
+            attack: 0.07,
+            release: 2.7
+        },
+        {
             id: 'musyng-grand',
             name: 'MusyngKite Grand Piano (Lite)',
             baseUrl: 'https://gleitz.github.io/midi-js-soundfonts/MusyngKite/acoustic_grand_piano-mp3/',
             urls: MIDI_JS_PIANO_URLS,
+            license: 'CC-BY-SA-3.0',
             eq: { low: 2, mid: 0, high: 1 },
             release: 1.2
+        },
+        {
+            id: 'musyng-epiano-2',
+            name: 'MusyngKite DX Electric Piano (Remote)',
+            baseUrl: 'https://gleitz.github.io/midi-js-soundfonts/MusyngKite/electric_piano_2-mp3/',
+            urls: MIDI_JS_PIANO_URLS,
+            license: 'CC-BY-SA-3.0',
+            eq: { low: -1, mid: 1, high: 4 },
+            filterFrequency: 12000,
+            attack: 0.008,
+            release: 1.4
+        },
+        {
+            id: 'musyng-new-age-pad',
+            name: 'MusyngKite New Age Pad (Remote)',
+            baseUrl: 'https://gleitz.github.io/midi-js-soundfonts/MusyngKite/pad_1_new_age-mp3/',
+            urls: MIDI_JS_PIANO_URLS,
+            license: 'CC-BY-SA-3.0',
+            eq: { low: 0, mid: -2, high: 3 },
+            filterFrequency: 6500,
+            attack: 0.12,
+            release: 3.5
         },
         {
             id: 'fatboy-grand',
@@ -487,11 +584,347 @@ class PianoAudioEngine {
             chorusDepth: 0.48,
             distortionWet: 0,
             distortionAmount: 0
+        },
+        {
+            id: 'studio-clean',
+            name: 'Pro Studio Clean',
+            eq: { low: -0.5, mid: 0.3, high: 1.8 },
+            filterFrequency: 18000,
+            reverbBoost: -0.04,
+            delayWet: 0,
+            delayFeedback: 0.08,
+            chorusWet: 0,
+            chorusDepth: 0,
+            distortionWet: 0.02,
+            distortionAmount: 0.03,
+            width: 0.54,
+            impulse: 'room',
+            convolverWet: 0.018,
+            multibandAmount: 0.34,
+            velocityCurve: 0.9,
+            velocityGain: 0.98,
+            humanize: 0.08,
+            releaseDelay: 0.08
+        },
+        {
+            id: 'close-mic',
+            name: 'Pro Close Mic',
+            eq: { low: 1.2, mid: 0, high: -1 },
+            filterFrequency: 11000,
+            reverbBoost: -0.16,
+            delayWet: 0,
+            delayFeedback: 0.08,
+            chorusWet: 0,
+            chorusDepth: 0,
+            distortionWet: 0,
+            distortionAmount: 0,
+            width: 0.48,
+            impulse: 'room',
+            convolverWet: 0.008,
+            multibandAmount: 0.22,
+            velocityCurve: 0.92,
+            velocityGain: 0.99,
+            humanize: 0.06,
+            releaseDelay: 0.06
+        },
+        {
+            id: 'soft-felt-pro',
+            name: 'Pro Soft Felt',
+            eq: { low: 4, mid: -1.8, high: -15 },
+            filterFrequency: 850,
+            reverbBoost: 0.06,
+            delayWet: 0,
+            delayFeedback: 0.08,
+            chorusWet: 0,
+            chorusDepth: 0,
+            distortionWet: 0,
+            distortionAmount: 0,
+            width: 0.58,
+            impulse: 'room',
+            convolverWet: 0.065,
+            multibandAmount: 0.28,
+            velocityCurve: 0.76,
+            velocityGain: 0.94,
+            humanize: 0.1,
+            releaseDelay: 0.14
+        },
+        {
+            id: 'warm-console',
+            name: 'Pro Warm Console',
+            eq: { low: 2.2, mid: 0.4, high: -3 },
+            filterFrequency: 7800,
+            reverbBoost: 0.02,
+            delayWet: 0.01,
+            delayFeedback: 0.1,
+            chorusWet: 0.02,
+            chorusDepth: 0.1,
+            distortionWet: 0.05,
+            distortionAmount: 0.08,
+            width: 0.56,
+            impulse: 'room',
+            convolverWet: 0.03,
+            multibandAmount: 0.32,
+            velocityCurve: 0.86,
+            velocityGain: 0.98,
+            humanize: 0.1,
+            releaseDelay: 0.1
+        },
+        {
+            id: 'presence-lift',
+            name: 'Pro Presence Lift',
+            eq: { low: -1.4, mid: 1.2, high: 4.4 },
+            filterFrequency: 15000,
+            reverbBoost: -0.02,
+            delayWet: 0,
+            delayFeedback: 0.08,
+            chorusWet: 0,
+            chorusDepth: 0,
+            distortionWet: 0.01,
+            distortionAmount: 0.02,
+            width: 0.58,
+            impulse: 'room',
+            convolverWet: 0.016,
+            multibandAmount: 0.3,
+            velocityCurve: 0.9,
+            velocityGain: 0.98,
+            humanize: 0.07,
+            releaseDelay: 0.08
+        },
+        {
+            id: 'plate-space',
+            name: 'Pro Plate Space',
+            eq: { low: 0, mid: -1.5, high: 0.8 },
+            filterFrequency: 10000,
+            reverbBoost: 0.22,
+            delayWet: 0.04,
+            delayFeedback: 0.12,
+            chorusWet: 0.02,
+            chorusDepth: 0.12,
+            distortionWet: 0,
+            distortionAmount: 0,
+            width: 0.66,
+            impulse: 'plate',
+            convolverWet: 0.12,
+            multibandAmount: 0.36,
+            velocityCurve: 0.84,
+            velocityGain: 0.96,
+            humanize: 0.09,
+            releaseDelay: 0.12
+        },
+        {
+            id: 'cinematic-wide',
+            name: 'Pro Cinematic Wide',
+            eq: { low: 1, mid: -2, high: -1 },
+            filterFrequency: 6400,
+            reverbBoost: 0.32,
+            delayWet: 0.11,
+            delayFeedback: 0.22,
+            chorusWet: 0.14,
+            chorusDepth: 0.34,
+            distortionWet: 0,
+            distortionAmount: 0,
+            width: 0.78,
+            impulse: 'hall',
+            convolverWet: 0.14,
+            multibandAmount: 0.42,
+            velocityCurve: 0.82,
+            velocityGain: 0.95,
+            humanize: 0.1,
+            releaseDelay: 0.14
+        },
+        {
+            id: 'analog-echo',
+            name: 'Pro Analog Echo',
+            eq: { low: 0.5, mid: 0.2, high: -4 },
+            filterFrequency: 4800,
+            reverbBoost: 0.07,
+            delayWet: 0.18,
+            delayFeedback: 0.34,
+            chorusWet: 0.03,
+            chorusDepth: 0.12,
+            distortionWet: 0.06,
+            distortionAmount: 0.1,
+            width: 0.6,
+            impulse: 'plate',
+            convolverWet: 0.05,
+            multibandAmount: 0.26,
+            velocityCurve: 0.86,
+            velocityGain: 0.97,
+            humanize: 0.12,
+            releaseDelay: 0.11
+        },
+        {
+            id: 'night-room',
+            name: 'Pro Night Room',
+            eq: { low: 2, mid: -2, high: -8 },
+            filterFrequency: 2200,
+            reverbBoost: 0.14,
+            delayWet: 0.02,
+            delayFeedback: 0.1,
+            chorusWet: 0,
+            chorusDepth: 0,
+            distortionWet: 0.02,
+            distortionAmount: 0.04,
+            width: 0.52,
+            impulse: 'room',
+            convolverWet: 0.055,
+            multibandAmount: 0.3,
+            velocityCurve: 0.78,
+            velocityGain: 0.95,
+            humanize: 0.08,
+            releaseDelay: 0.12
+        },
+        {
+            id: 'sparkle-air',
+            name: 'Pro Sparkle Air',
+            eq: { low: -2.5, mid: -0.8, high: 8 },
+            filterFrequency: 18000,
+            reverbBoost: 0.08,
+            delayWet: 0.02,
+            delayFeedback: 0.1,
+            chorusWet: 0.03,
+            chorusDepth: 0.1,
+            distortionWet: 0,
+            distortionAmount: 0,
+            width: 0.62,
+            impulse: 'room',
+            convolverWet: 0.035,
+            multibandAmount: 0.32,
+            velocityCurve: 0.9,
+            velocityGain: 0.98,
+            humanize: 0.07,
+            releaseDelay: 0.08
+        },
+        {
+            id: 'master-bus',
+            name: 'Pro Master Bus',
+            eq: { low: 0.6, mid: -0.2, high: 1.5 },
+            filterFrequency: 17000,
+            reverbBoost: 0.02,
+            delayWet: 0.01,
+            delayFeedback: 0.1,
+            chorusWet: 0.01,
+            chorusDepth: 0.08,
+            distortionWet: 0.015,
+            distortionAmount: 0.025,
+            width: 0.58,
+            impulse: 'room',
+            convolverWet: 0.025,
+            multibandAmount: 0.55,
+            velocityCurve: 0.88,
+            velocityGain: 0.97,
+            humanize: 0.07,
+            releaseDelay: 0.08
+        },
+        {
+            id: 'felt-cloud',
+            name: 'Pro Felt Cloud',
+            eq: { low: 3.5, mid: -2.4, high: -13 },
+            filterFrequency: 1200,
+            reverbBoost: 0.18,
+            delayWet: 0.06,
+            delayFeedback: 0.18,
+            chorusWet: 0.06,
+            chorusDepth: 0.22,
+            distortionWet: 0,
+            distortionAmount: 0,
+            width: 0.72,
+            impulse: 'hall',
+            convolverWet: 0.1,
+            multibandAmount: 0.34,
+            velocityCurve: 0.72,
+            velocityGain: 0.93,
+            humanize: 0.11,
+            releaseDelay: 0.16
+        },
+        {
+            id: 'ep-wide-clean',
+            name: 'Pro EP Wide Clean',
+            eq: { low: -0.8, mid: 0.8, high: 3.4 },
+            filterFrequency: 14500,
+            reverbBoost: 0.03,
+            delayWet: 0.05,
+            delayFeedback: 0.16,
+            chorusWet: 0.12,
+            chorusDepth: 0.28,
+            distortionWet: 0.01,
+            distortionAmount: 0.02,
+            width: 0.76,
+            impulse: 'plate',
+            convolverWet: 0.045,
+            multibandAmount: 0.28,
+            velocityCurve: 0.9,
+            velocityGain: 0.98,
+            humanize: 0.08,
+            releaseDelay: 0.08
+        },
+        {
+            id: 'tape-plate',
+            name: 'Pro Tape Plate',
+            eq: { low: 1.8, mid: 0.2, high: -2.8 },
+            filterFrequency: 6200,
+            reverbBoost: 0.12,
+            delayWet: 0.08,
+            delayFeedback: 0.2,
+            chorusWet: 0.04,
+            chorusDepth: 0.16,
+            distortionWet: 0.08,
+            distortionAmount: 0.14,
+            width: 0.62,
+            impulse: 'plate',
+            convolverWet: 0.08,
+            multibandAmount: 0.36,
+            velocityCurve: 0.84,
+            velocityGain: 0.96,
+            humanize: 0.12,
+            releaseDelay: 0.12
         }
     ];
 
     constructor() {
         this.init(this.currentSoundfont);
+    }
+
+    private createImpulseBuffer(profile: Exclude<ImpulseProfile, 'none'>): AudioBuffer {
+        const context = Tone.getContext().rawContext as BaseAudioContext;
+        const seconds = profile === 'room' ? 0.42 : profile === 'plate' ? 0.86 : 1.35;
+        const length = Math.max(1, Math.floor(context.sampleRate * seconds));
+        const buffer = context.createBuffer(2, length, context.sampleRate);
+        const decayCurve = profile === 'room' ? 4.4 : profile === 'plate' ? 2.2 : 2.8;
+        const gain = profile === 'room' ? 0.18 : profile === 'plate' ? 0.15 : 0.12;
+
+        for (let channel = 0; channel < buffer.numberOfChannels; channel += 1) {
+            const data = buffer.getChannelData(channel);
+            for (let i = 0; i < length; i += 1) {
+                const progress = i / length;
+                const stereoOffset = channel === 0 ? 0.97 : 1.03;
+                const tail = (Math.random() * 2 - 1) * Math.pow(1 - progress, decayCurve);
+                const earlyTap = i % Math.floor(context.sampleRate * 0.011 * stereoOffset) === 0
+                    ? (1 - progress) * 0.34
+                    : 0;
+                data[i] = (tail + earlyTap) * gain;
+            }
+        }
+
+        return buffer;
+    }
+
+    private setImpulseProfile(profile: ImpulseProfile) {
+        if (!this.convolver || profile === this.currentImpulseProfile) return;
+
+        if (profile === 'none') {
+            this.convolver.buffer = null;
+            this.currentImpulseProfile = profile;
+            return;
+        }
+
+        try {
+            this.convolver.buffer = new Tone.ToneAudioBuffer(this.createImpulseBuffer(profile));
+            this.currentImpulseProfile = profile;
+        } catch (err) {
+            console.warn("Could not create convolution impulse response", err);
+            if (this.convolverGain) this.convolverGain.gain.value = 0;
+        }
     }
 
     private ensureToneEffects() {
@@ -513,12 +946,19 @@ class PianoAudioEngine {
             wet: 0
         }).connect(this.reverb);
 
+        this.convolverGain = new Tone.Gain(0).connect(this.limiter);
+        this.convolver = new Tone.Convolver(this.createImpulseBuffer('room')).connect(this.convolverGain);
+        this.convolver.normalize = true;
+        this.delay.connect(this.convolver);
+
+        this.widener = new Tone.StereoWidener(0.5).connect(this.delay);
+
         this.chorus = new Tone.Chorus({
             frequency: 0.35,
             delayTime: 2.8,
             depth: 0,
             wet: 0
-        }).connect(this.delay);
+        }).connect(this.widener);
         this.chorus.start();
 
         this.distortion = new Tone.Distortion({
@@ -539,10 +979,18 @@ class PianoAudioEngine {
             release: 0.25
         }).connect(this.eq);
 
+        this.multibandCompressor = new Tone.MultibandCompressor({
+            lowFrequency: 180,
+            highFrequency: 2400,
+            low: { threshold: -26, ratio: 1.5, attack: 0.012, release: 0.22 },
+            mid: { threshold: -28, ratio: 1.4, attack: 0.008, release: 0.2 },
+            high: { threshold: -24, ratio: 1.35, attack: 0.004, release: 0.16 }
+        }).connect(this.compressor);
+
         this.filter = new Tone.Filter({
             type: 'lowpass',
             frequency: 20000
-        }).connect(this.compressor);
+        }).connect(this.multibandCompressor);
     }
 
     private applyEffectProfile(sfConfig?: PianoSoundfont) {
@@ -573,6 +1021,19 @@ class PianoAudioEngine {
             this.compressor.release.value = this.studioMode ? 0.32 : 0.25;
         }
 
+        if (this.multibandCompressor) {
+            const amount = Math.min(1, Math.max(0, filterPreset.multibandAmount ?? (this.studioMode ? 0.18 : 0)));
+            this.multibandCompressor.low.threshold.value = -24 - amount * 10;
+            this.multibandCompressor.mid.threshold.value = -26 - amount * 8;
+            this.multibandCompressor.high.threshold.value = -22 - amount * 7;
+            this.multibandCompressor.low.ratio.value = 1.25 + amount * 2.1;
+            this.multibandCompressor.mid.ratio.value = 1.2 + amount * 1.7;
+            this.multibandCompressor.high.ratio.value = 1.15 + amount * 1.45;
+            this.multibandCompressor.low.release.value = 0.24 + amount * 0.12;
+            this.multibandCompressor.mid.release.value = 0.18 + amount * 0.1;
+            this.multibandCompressor.high.release.value = 0.12 + amount * 0.08;
+        }
+
         if (this.distortion) {
             this.distortion.distortion = filterPreset.distortionAmount;
             this.distortion.wet.value = filterPreset.distortionWet;
@@ -583,15 +1044,33 @@ class PianoAudioEngine {
             this.chorus.wet.value = filterPreset.chorusWet;
         }
 
+        if (this.widener) {
+            const width = filterPreset.width ?? 0.5;
+            this.widener.width.value = Math.min(0.9, Math.max(0.2, this.studioMode ? width : Math.min(width, 0.6)));
+        }
+
         if (this.delay) {
             this.delay.feedback.value = filterPreset.delayFeedback;
             this.delay.wet.value = filterPreset.delayWet;
+        }
+
+        const impulse = filterPreset.impulse ?? 'none';
+        this.setImpulseProfile(impulse);
+
+        if (this.convolverGain) {
+            const wet = impulse === 'none' ? 0 : (filterPreset.convolverWet ?? 0);
+            this.convolverGain.gain.value = Math.min(0.18, Math.max(0, wet * (this.studioMode ? 1 : 0.72)));
         }
 
         if (this.reverb) {
             const wet = this.currentReverbWet + filterPreset.reverbBoost + (this.studioMode ? 0.12 : 0);
             this.reverb.wet.value = Math.min(0.88, Math.max(0, wet));
         }
+
+        this.currentVelocityCurve = filterPreset.velocityCurve ?? (this.studioMode ? 0.88 : 1);
+        this.currentVelocityGain = filterPreset.velocityGain ?? (this.studioMode ? 0.98 : 1);
+        this.currentHumanize = filterPreset.humanize ?? (this.studioMode ? 0.12 : 0.08);
+        this.currentReleaseDelay = filterPreset.releaseDelay ?? (this.studioMode ? 0.1 : 0.08);
     }
 
     private async withTimeout<T>(promise: Promise<T>, timeoutMs: number, label: string): Promise<T> {
@@ -708,9 +1187,10 @@ class PianoAudioEngine {
         if (!this.isLoaded) return;
 
         const finalNote = this.getTransposedNote(note);
-        const humanVelocity = velocity * (0.94 + Math.random() * 0.12);
-        const studioVelocity = this.studioMode ? Math.pow(humanVelocity, 0.88) * 0.98 : humanVelocity;
-        const expressiveVelocity = Math.min(1, Math.max(0.05, studioVelocity));
+        const humanize = Math.min(0.2, Math.max(0, this.currentHumanize));
+        const humanVelocity = velocity * (1 - humanize * 0.5 + Math.random() * humanize);
+        const shapedVelocity = Math.pow(humanVelocity, this.currentVelocityCurve) * this.currentVelocityGain;
+        const expressiveVelocity = Math.min(1, Math.max(0.05, shapedVelocity));
 
         // If the note is already in sustained state, we re-trigger it
         if (this.sustainedNotes.has(finalNote)) {
@@ -743,7 +1223,7 @@ class PianoAudioEngine {
                 const midiNote = Math.round(Tone.Frequency(finalNote).toMidi());
                 this.spessaSynth.noteOff(0, midiNote);
             } else if (this.sampler) {
-                this.sampler.triggerRelease(finalNote, Tone.now() + 0.1);
+                this.sampler.triggerRelease(finalNote, Tone.now() + this.currentReleaseDelay);
             }
             this.sustainedNotes.delete(finalNote);
         }
@@ -801,7 +1281,7 @@ class PianoAudioEngine {
                     const midiNote = Math.round(Tone.Frequency(noteToRelease).toMidi());
                     this.spessaSynth.noteOff(0, midiNote);
                 } else if (this.sampler) {
-                    this.sampler.triggerRelease(noteToRelease, Tone.now() + 0.1);
+                    this.sampler.triggerRelease(noteToRelease, Tone.now() + this.currentReleaseDelay);
                 }
             });
             this.sustainedNotes.clear();
