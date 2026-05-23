@@ -1,26 +1,20 @@
-# Virtual Piano & Sound Sculpture 🎹✨
+# Virtual Piano & Sound Sculpture
 
-A stunning, interactive 3D Virtual Piano application built with React Three Fiber, Rapier Physics, and Tone.js. Play notes, explore different soundfonts, and watch the music come alive in the immersive "Sound Sculpture" mode.
+A 3D virtual piano built with React Three Fiber, Rapier Physics, and Tone.js. Play notes, switch piano soundfonts, and use Sound Sculpture mode for reactive visuals.
 
-## 🌟 Features
+## Features
 
-*   **Interactive 3D Piano Scene**: A fully playable, visually rich 3D piano built with `@react-three/fiber` and `@react-three/drei`.
-*   **Realistic Audio Engine**: Powered by `Tone.js` and `SpessaSynth`, supporting multiple built-in instruments (Salamander Grand, Acoustic Guitar, Harp, etc.) and custom `.sf2` SoundFont loading.
-*   **🎵 Sound Sculpture Mode**: A dynamic, audio-reactive 3D physics environment!
-    *   **Live Reaction**: The sculpture pieces react in real-time to the keys you play.
-    *   **Frequency-driven Physics**: 
-        *   **Treble (High Notes)**: Produce a strong gravitational pull, attracting the pieces to form a central shape.
-        *   **Bass (Low Notes)**: Generate explosive repulsion force, scattering the pieces outward into the void.
-    *   **Center of Mass Tracking**: The camera intelligently pans and zooms based on the average location and spread of the active pieces.
-    *   **Post-processing Magic**: Stunning visual effects including Black Fog, Bloom, and Chromatic Aberration (`@react-three/postprocessing`).
-*   **Advanced Audio Controls**: Real-time control over Volume, Reverb, Transposition, Sustain Toggle, and Instrument selection.
-*   **Interactive UI**: A sleek, glassmorphic overlay to manage settings and a draggable, resizable Notepad for jotting down chords and lyrics.
+*   **Interactive 3D Piano Scene**: A playable 3D piano built with `@react-three/fiber` and `@react-three/drei`.
+*   **Piano Audio Engine**: Powered by `Tone.js` and `SpessaSynth`, with Salamander Grand, multiple free built-in piano presets from MIDI.js Soundfonts, and custom `.sf2`/`.sf3` SoundFont loading.
+*   **Sound Sculpture Mode**: A dynamic audio-reactive 3D physics environment.
+*   **Advanced Audio Controls**: Real-time control over volume, reverb, transposition, sustain, and instrument selection.
+*   **Interactive UI**: Overlay controls plus a draggable, resizable notepad for chords and lyrics.
 
-## 🚀 Getting Started
+## Getting Started
 
 ### Prerequisites
 
-*   Node.js (v18 or higher recommended)
+*   Node.js v18 or higher
 *   npm or yarn
 
 ### Installation
@@ -29,33 +23,45 @@ A stunning, interactive 3D Virtual Piano application built with React Three Fibe
     ```bash
     cd vp
     ```
+
 2.  Install dependencies:
     ```bash
     npm install
     ```
+
 3.  Start the development server:
     ```bash
     npm run dev
     ```
-4.  Open your browser and navigate to `http://localhost:5173` (or the port provided by Vite).
 
-## 🎮 How to Play
+4.  Open `http://localhost:5173` or the port provided by Vite.
 
-*   **Keyboard**: Use your computer keyboard to play the piano (e.g., `A`, `W`, `S`, `E`, `D` for the C major scale).
+## How to Play
+
+*   **Keyboard**: Use your computer keyboard to play the piano, for example `A`, `W`, `S`, `E`, `D`.
 *   **Mouse**: Click directly on the 3D piano keys.
-*   **Sustain Pedal**: Hold the `Spacebar` or toggle the "Sustain (Always On)" checkbox in the overlay.
-*   **Sculpture Mode**: Click the "🎵 Sculpture Mode" button in the overlay to switch to the immersive visualizer. Play notes to scatter and attract the physics pieces!
+*   **Sustain Pedal**: Hold `Spacebar` or toggle `Sustain (Always On)` in the overlay.
+*   **Sculpture Mode**: Use the overlay button to switch between piano mode and the visualizer.
 
-## 🛠️ Technology Stack
+## Piano Soundfonts
+
+The instrument selector includes fast-loading free piano presets from:
+
+*   Salamander Grand Piano samples hosted by Tone.js.
+*   FluidR3, MusyngKite, and FatBoy presets hosted by `gleitz/midi-js-soundfonts`.
+
+To add more local soundfonts, use the `+ Load .SF2/.SF3 File` option in the overlay. Built-in web presets are mapped in `src/audio/PianoEngine.ts`.
+
+## Technology Stack
 
 *   **Frontend Framework**: React 19 + TypeScript
 *   **3D Rendering**: `@react-three/fiber`, `@react-three/drei`, `three.js`
-*   **Physics Engine**: `@react-three/rapier` (Rapier physics engine bindings for React)
+*   **Physics Engine**: `@react-three/rapier`
 *   **Post-Processing**: `@react-three/postprocessing`
-*   **Audio Synthesis**: `tone.js`, `spessasynth_lib` (for .sf2 soundfonts)
+*   **Audio Synthesis**: `tone.js`, `spessasynth_lib`
 *   **Build Tool**: Vite
 *   **Styling**: Vanilla CSS
 
-## 📝 License
+## License
 
 This project is created for educational and experimental purposes.

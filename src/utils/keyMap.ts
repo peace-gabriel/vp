@@ -49,7 +49,7 @@ export const getNoteFromKey = (e: KeyboardEvent): string | undefined => {
   // Fallback 2: using e.code for physical location if shift is held but OS mapping is weird
   // e.code format is usually "KeyA", "Digit1"
   if (e.shiftKey) {
-    let baseChar = e.code.replace('Key', '').replace('Digit', '');
+    const baseChar = e.code.replace('Key', '').replace('Digit', '');
 
     // Map digit physical keys to their shift characters for our map
     const codeShiftMap: Record<string, string> = {

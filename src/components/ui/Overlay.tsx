@@ -42,11 +42,11 @@ const Overlay: React.FC<OverlayProps> = ({
     const getStored = <T,>(key: string, fallback: T): T => {
         const stored = localStorage.getItem(`vp_${key}`);
         if (stored !== null) {
-            try { return JSON.parse(stored); } catch (e) { return fallback; }
+            try { return JSON.parse(stored); } catch { return fallback; }
         }
         return fallback;
     };
-    const saveStored = (key: string, val: any) => localStorage.setItem(`vp_${key}`, JSON.stringify(val));
+    const saveStored = (key: string, val: unknown) => localStorage.setItem(`vp_${key}`, JSON.stringify(val));
 
     const [volume, setVolume] = useState<number>(() => getStored('volume', -5));
     const [reverb, setReverb] = useState<number>(() => getStored('reverb', 0.3));
@@ -54,7 +54,7 @@ const Overlay: React.FC<OverlayProps> = ({
     const [soundfont, setSoundfont] = useState<string>(() => {
         const sf = getStored('soundfont', audioEngine.currentSoundfont);
         if (sf.startsWith('custom-sf2-')) return 'salamander';
-        return sf;
+        return audioEngine.availableSoundfonts.some((available) => available.id === sf) ? sf : 'salamander';
     });
     const [sustainToggle, setSustainToggle] = useState<boolean>(() => getStored('sustainToggle', false));
 
@@ -113,11 +113,17 @@ const Overlay: React.FC<OverlayProps> = ({
         saveStored('transpose', val);
     };
 
-    const handleSoundfontChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const handleSoundfontChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
         const val = e.target.value;
         setSoundfont(val);
-        audioEngine.loadSoundfont(val);
-        saveStored('soundfont', val);
+        try {
+            await audioEngine.loadSoundfont(val);
+            saveStored('soundfont', val);
+        } catch (err) {
+            console.error("Failed to load soundfont", err);
+            alert("Error loading piano soundfont");
+            setSoundfont(audioEngine.currentSoundfont);
+        }
         e.target.blur();
     };
 
@@ -216,10 +222,10 @@ const Overlay: React.FC<OverlayProps> = ({
                                 )}
                             </select>
                             <label style={{ cursor: 'pointer', fontSize: '0.7rem', color: '#88f', textDecoration: 'underline' }}>
-                                + Load .SF2 File
+                                + Load .SF2/.SF3 File
                                 <input
                                     type="file"
-                                    accept=".sf2"
+                                    accept=".sf2,.sf3,.sfpack,.dls"
                                     onChange={handleFileLoad}
                                     style={{ display: 'none' }}
                                 />

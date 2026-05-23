@@ -1,6 +1,57 @@
 import * as Tone from 'tone';
 import { WorkletSynthesizer } from 'spessasynth_lib';
 
+type PianoSoundfont = {
+    id: string;
+    name: string;
+    baseUrl: string;
+    urls: Record<string, string>;
+    eq?: {
+        low: number;
+        mid: number;
+        high: number;
+    };
+    filterFrequency?: number;
+    attack?: number;
+    release?: number;
+};
+
+type BrowserAudioWindow = Window & typeof globalThis & {
+    webkitAudioContext?: typeof AudioContext;
+};
+
+const SALAMANDER_URLS: Record<string, string> = {
+    A0: "A0.mp3", C1: "C1.mp3", "D#1": "Ds1.mp3", "F#1": "Fs1.mp3",
+    A1: "A1.mp3", C2: "C2.mp3", "D#2": "Ds2.mp3", "F#2": "Fs2.mp3",
+    A2: "A2.mp3", C3: "C3.mp3", "D#3": "Ds3.mp3", "F#3": "Fs3.mp3",
+    A3: "A3.mp3", C4: "C4.mp3", "D#4": "Ds4.mp3", "F#4": "Fs4.mp3",
+    A4: "A4.mp3", C5: "C5.mp3", "D#5": "Ds5.mp3", "F#5": "Fs5.mp3",
+    A5: "A5.mp3", C6: "C6.mp3", "D#6": "Ds6.mp3", "F#6": "Fs6.mp3",
+    A6: "A6.mp3", C7: "C7.mp3", "D#7": "Ds7.mp3", "F#7": "Fs7.mp3",
+    A7: "A7.mp3", C8: "C8.mp3"
+};
+
+const CASIO_URLS: Record<string, string> = {
+    A1: "A1.mp3", C2: "C2.mp3", "D#2": "Ds2.mp3", "F#2": "Fs2.mp3", A2: "A2.mp3"
+};
+
+const MIDI_NOTE_NAMES_SHARP = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+const MIDI_NOTE_FILES_FLAT = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B'];
+const MIDI_JS_FAST_SAMPLE_MIDIS = Array.from({ length: 30 }, (_, index) => 21 + index * 3);
+
+const getMidiOctave = (midiNote: number) => Math.floor(midiNote / 12) - 1;
+
+const buildMidiJsPianoUrls = () => {
+    return MIDI_JS_FAST_SAMPLE_MIDIS.reduce<Record<string, string>>((urls, midiNote) => {
+        const noteIndex = midiNote % 12;
+        const octave = getMidiOctave(midiNote);
+        urls[`${MIDI_NOTE_NAMES_SHARP[noteIndex]}${octave}`] = `${MIDI_NOTE_FILES_FLAT[noteIndex]}${octave}.mp3`;
+        return urls;
+    }, {});
+};
+
+const MIDI_JS_PIANO_URLS = buildMidiJsPianoUrls();
+
 class PianoAudioEngine {
     private sampler: Tone.Sampler | null = null;
     private reverb: Tone.Reverb | null = null;
@@ -22,14 +73,96 @@ class PianoAudioEngine {
     private sustainedNotes: Set<string> = new Set(); // Internal notes waiting to be released
 
     // Soundfonts
-    public availableSoundfonts = [
-        { id: 'salamander', name: 'Salamander Grand', baseUrl: 'https://tonejs.github.io/audio/salamander/' },
-        { id: 'casio', name: 'Casio Keyboard', baseUrl: 'https://tonejs.github.io/audio/casio/' },
-        { id: 'guitar-acoustic', name: 'Acoustic Guitar', baseUrl: 'https://tonejs.github.io/audio/guitar-acoustic/' },
-        { id: 'xylophone', name: 'Xylophone', baseUrl: 'https://tonejs.github.io/audio/xylophone/' },
-        { id: 'harp', name: 'Harp', baseUrl: 'https://tonejs.github.io/audio/harp/' },
-        { id: 'hakurei-felt', name: 'Hakurei Felt (Emulated)', baseUrl: 'https://tonejs.github.io/audio/salamander/' },
-        { id: 'sk2-pure', name: 'SK2 Pure (Emulated)', baseUrl: 'https://tonejs.github.io/audio/salamander/' }
+    public availableSoundfonts: PianoSoundfont[] = [
+        {
+            id: 'salamander',
+            name: 'Salamander Grand',
+            baseUrl: 'https://tonejs.github.io/audio/salamander/',
+            urls: SALAMANDER_URLS,
+            release: 1.5
+        },
+        {
+            id: 'fluid-grand',
+            name: 'FluidR3 Acoustic Grand (Free)',
+            baseUrl: 'https://gleitz.github.io/midi-js-soundfonts/FluidR3_GM/acoustic_grand_piano-mp3/',
+            urls: MIDI_JS_PIANO_URLS,
+            eq: { low: 1, mid: 0, high: 1 },
+            release: 1.2
+        },
+        {
+            id: 'fluid-bright',
+            name: 'FluidR3 Bright Piano (Free)',
+            baseUrl: 'https://gleitz.github.io/midi-js-soundfonts/FluidR3_GM/bright_acoustic_piano-mp3/',
+            urls: MIDI_JS_PIANO_URLS,
+            eq: { low: -1, mid: 1, high: 4 },
+            release: 1.1
+        },
+        {
+            id: 'fluid-electric-grand',
+            name: 'FluidR3 Electric Grand (Free)',
+            baseUrl: 'https://gleitz.github.io/midi-js-soundfonts/FluidR3_GM/electric_grand_piano-mp3/',
+            urls: MIDI_JS_PIANO_URLS,
+            eq: { low: 0, mid: 2, high: 3 },
+            release: 1
+        },
+        {
+            id: 'fluid-honky-tonk',
+            name: 'FluidR3 Honky Tonk Piano (Free)',
+            baseUrl: 'https://gleitz.github.io/midi-js-soundfonts/FluidR3_GM/honkytonk_piano-mp3/',
+            urls: MIDI_JS_PIANO_URLS,
+            eq: { low: -1, mid: 3, high: 2 },
+            release: 0.9
+        },
+        {
+            id: 'fluid-epiano-1',
+            name: 'FluidR3 Electric Piano 1 (Free)',
+            baseUrl: 'https://gleitz.github.io/midi-js-soundfonts/FluidR3_GM/electric_piano_1-mp3/',
+            urls: MIDI_JS_PIANO_URLS,
+            eq: { low: 1, mid: 2, high: 1 },
+            release: 1
+        },
+        {
+            id: 'musyng-grand',
+            name: 'MusyngKite Grand Piano (Free)',
+            baseUrl: 'https://gleitz.github.io/midi-js-soundfonts/MusyngKite/acoustic_grand_piano-mp3/',
+            urls: MIDI_JS_PIANO_URLS,
+            eq: { low: 2, mid: 0, high: 1 },
+            release: 1.2
+        },
+        {
+            id: 'fatboy-grand',
+            name: 'FatBoy Grand Piano (Free)',
+            baseUrl: 'https://gleitz.github.io/midi-js-soundfonts/FatBoy/acoustic_grand_piano-mp3/',
+            urls: MIDI_JS_PIANO_URLS,
+            eq: { low: 1, mid: 1, high: 2 },
+            release: 1.15
+        },
+        {
+            id: 'casio',
+            name: 'Casio Keyboard (Lite)',
+            baseUrl: 'https://tonejs.github.io/audio/casio/',
+            urls: CASIO_URLS,
+            eq: { low: -2, mid: 2, high: 5 },
+            release: 0.8
+        },
+        {
+            id: 'hakurei-felt',
+            name: 'Hakurei Felt (Emulated)',
+            baseUrl: 'https://tonejs.github.io/audio/salamander/',
+            urls: SALAMANDER_URLS,
+            eq: { low: 6, mid: 0, high: -20 },
+            filterFrequency: 800,
+            attack: 0.05,
+            release: 1.8
+        },
+        {
+            id: 'sk2-pure',
+            name: 'SK2 Pure (Emulated)',
+            baseUrl: 'https://tonejs.github.io/audio/salamander/',
+            urls: SALAMANDER_URLS,
+            eq: { low: -2, mid: 2, high: 8 },
+            release: 1.3
+        }
     ];
     public currentSoundfont = 'salamander';
 
@@ -42,7 +175,7 @@ class PianoAudioEngine {
         // We will call Tone.start() explicitly via a user action method as well.
         try {
             await Tone.start();
-        } catch (e) {
+        } catch {
             console.warn("Tone.start() skipped during init, waiting for user gesture.");
         }
 
@@ -83,27 +216,15 @@ class PianoAudioEngine {
         }
 
         // --- EQ and Filter Dynamic Config ---
-        let lowFreq = 0, midFreq = 1, highFreq = 2;
-        let filterFreq = 20000;
-        let attackTime = 0; // default for sampler
-
-        if (sfConfig.id === 'hakurei-felt') {
-            lowFreq = 6;
-            midFreq = 0;
-            highFreq = -20; // Cut highs for felt
-            filterFreq = 800; // Lowpass filter
-            attackTime = 0.05; // Softer attack
-        } else if (sfConfig.id === 'sk2-pure') {
-            lowFreq = -2;
-            midFreq = 2;
-            highFreq = 8; // Brighten up
-            filterFreq = 20000;
-        }
+        const eqConfig = sfConfig.eq ?? { low: 0, mid: 1, high: 2 };
+        const filterFreq = sfConfig.filterFrequency ?? 20000;
+        const attackTime = sfConfig.attack ?? 0;
+        const releaseTime = sfConfig.release ?? 1.2;
 
         if (this.eq) {
-            this.eq.low.value = lowFreq;
-            this.eq.mid.value = midFreq;
-            this.eq.high.value = highFreq;
+            this.eq.low.value = eqConfig.low;
+            this.eq.mid.value = eqConfig.mid;
+            this.eq.high.value = eqConfig.high;
         }
 
         if (this.filter) {
@@ -116,51 +237,12 @@ class PianoAudioEngine {
             this.sampler = null;
         }
 
-        let urls: any = {};
-        if (sfConfig.id === 'casio') {
-            urls = {
-                A1: "A1.mp3", A2: "A2.mp3", C2: "C2.mp3", C3: "C3.mp3", "D#2": "Ds2.mp3", "F#2": "Fs2.mp3"
-            };
-        } else if (sfConfig.id === 'guitar-acoustic') {
-            urls = {
-                F4: "F4.mp3", F3: "F3.mp3", F2: "F2.mp3",
-                C4: "C4.mp3", C3: "C3.mp3",
-                A4: "A4.mp3", A3: "A3.mp3", A2: "A2.mp3"
-            };
-        } else if (sfConfig.id === 'xylophone') {
-            urls = {
-                C5: "C5.mp3", C6: "C6.mp3", C7: "C7.mp3", C8: "C8.mp3",
-                G4: "G4.mp3", G5: "G5.mp3", G6: "G6.mp3", G7: "G7.mp3"
-            };
-        } else if (sfConfig.id === 'harp') {
-            urls = {
-                C5: "C5.mp3", D2: "D2.mp3", D4: "D4.mp3", D6: "D6.mp3", D7: "D7.mp3",
-                E1: "E1.mp3", E3: "E3.mp3", E5: "E5.mp3", F2: "F2.mp3", F4: "F4.mp3",
-                F6: "F6.mp3", F7: "F7.mp3", G1: "G1.mp3", G3: "G3.mp3", G5: "G5.mp3",
-                A2: "A2.mp3", A4: "A4.mp3", A6: "A6.mp3", B1: "B1.mp3", B3: "B3.mp3",
-                B5: "B5.mp3", B6: "B6.mp3", C3: "C3.mp3"
-            };
-        } else {
-            // Salamander Grand (default)
-            urls = {
-                A0: "A0.mp3", C1: "C1.mp3", "D#1": "Ds1.mp3", "F#1": "Fs1.mp3",
-                A1: "A1.mp3", C2: "C2.mp3", "D#2": "Ds2.mp3", "F#2": "Fs2.mp3",
-                A2: "A2.mp3", C3: "C3.mp3", "D#3": "Ds3.mp3", "F#3": "Fs3.mp3",
-                A3: "A3.mp3", C4: "C4.mp3", "D#4": "Ds4.mp3", "F#4": "Fs4.mp3",
-                A4: "A4.mp3", C5: "C5.mp3", "D#5": "Ds5.mp3", "F#5": "Fs5.mp3",
-                A5: "A5.mp3", C6: "C6.mp3", "D#6": "Ds6.mp3", "F#6": "Fs6.mp3",
-                A6: "A6.mp3", C7: "C7.mp3", "D#7": "Ds7.mp3", "F#7": "Fs7.mp3",
-                A7: "A7.mp3", C8: "C8.mp3"
-            };
-        }
-
-
         // Load Piano Sampler
         this.sampler = new Tone.Sampler({
-            urls: urls,
+            urls: sfConfig.urls,
             baseUrl: sfConfig.baseUrl,
             attack: attackTime,
-            release: 1.5,
+            release: releaseTime,
             volume: this.currentVolume,
             onload: () => {
                 this.isLoaded = true;
@@ -179,7 +261,7 @@ class PianoAudioEngine {
 
         try {
             return Tone.Frequency(note).transpose(this.currentTranspose).toNote();
-        } catch (e) {
+        } catch {
             console.warn("Invalid note for transpose", note);
             return note;
         }
@@ -297,7 +379,11 @@ class PianoAudioEngine {
     public async loadCustomSoundfont(buffer: ArrayBuffer, name: string) {
 
         if (!this.spessaContext) {
-            this.spessaContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+            const AudioContextConstructor = window.AudioContext || (window as BrowserAudioWindow).webkitAudioContext;
+            if (!AudioContextConstructor) {
+                throw new Error("Web Audio API is not supported in this browser.");
+            }
+            this.spessaContext = new AudioContextConstructor();
             this.spessaMasterGain = this.spessaContext.createGain();
 
             // Connect spessa to Tone.js destination/analyser safely if possible, else destination

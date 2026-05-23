@@ -32,6 +32,7 @@ function App() {
   // Using a ref for active notes to efficiently check in event listeners without stale closures
   const activeNotesRef = useRef<Set<string>>(new Set());
   const playedNotesRef = useRef<PlayedNote[]>([]);
+  const pressedKeysRef = useRef<Map<string, string>>(new Map());
 
   const addNote = useCallback((note: string) => {
     setActiveNotes((prev) => {
@@ -93,6 +94,21 @@ function App() {
   useEffect(() => {
     if (!started) return;
 
+    const releaseAllActiveNotes = () => {
+      audioEngine.releaseAllNotes();
+      pressedKeysRef.current.clear();
+
+      setActiveNotes(new Set());
+      activeNotesRef.current = new Set();
+
+      setPlayedNotes((prev) => {
+        const now = performance.now();
+        const next = prev.map(pn => ({ ...pn, endTime: pn.endTime || now }));
+        playedNotesRef.current = next;
+        return next;
+      });
+    };
+
     const onKeyDown = (e: KeyboardEvent) => {
       // Ignore if typing in an input
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement || e.target instanceof HTMLSelectElement) return;
@@ -104,11 +120,13 @@ function App() {
         return;
       }
 
-      if (e.repeat) return; // Prevent continuous firing if key is held down
+      const keyId = e.code || e.key;
+      if (e.repeat || pressedKeysRef.current.has(keyId)) return; // Prevent continuous firing if key is held down
 
       const note = getNoteFromKey(e);
       if (note) {
         e.preventDefault();
+        pressedKeysRef.current.set(keyId, note);
         handlePlayNote(note);
       }
     };
@@ -119,7 +137,10 @@ function App() {
         return;
       }
 
-      const note = getNoteFromKey(e);
+      const keyId = e.code || e.key;
+      const note = pressedKeysRef.current.get(keyId) ?? getNoteFromKey(e);
+      pressedKeysRef.current.delete(keyId);
+
       if (note) {
         e.preventDefault();
         handleReleaseNote(note);
@@ -129,27 +150,19 @@ function App() {
     // Fix stuck notes on blur using visibilitychange which is safer for <select> popups
     const onVisibilityChange = () => {
       if (document.visibilityState === 'hidden') {
-        audioEngine.releaseAllNotes();
-        // Clear all visuals
-        setActiveNotes(new Set());
-        activeNotesRef.current = new Set();
-
-        setPlayedNotes((prev) => {
-          const now = performance.now();
-          const next = prev.map(pn => ({ ...pn, endTime: pn.endTime || now }));
-          playedNotesRef.current = next;
-          return next;
-        });
+        releaseAllActiveNotes();
       }
     };
 
     window.addEventListener('keydown', onKeyDown);
     window.addEventListener('keyup', onKeyUp);
+    window.addEventListener('blur', releaseAllActiveNotes);
     document.addEventListener('visibilitychange', onVisibilityChange);
 
     return () => {
       window.removeEventListener('keydown', onKeyDown);
       window.removeEventListener('keyup', onKeyUp);
+      window.removeEventListener('blur', releaseAllActiveNotes);
       document.removeEventListener('visibilitychange', onVisibilityChange);
     };
   }, [started, handlePlayNote, handleReleaseNote]);
