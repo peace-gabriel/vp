@@ -37,35 +37,86 @@ export const VIRTUAL_PIANO_MAP: Record<string, string> = {
   'm': 'C7'
 };
 
+const BASE_CODE_MAP: Record<string, string> = {
+  Digit1: 'C2',
+  Digit2: 'D2',
+  Digit3: 'E2',
+  Digit4: 'F2',
+  Digit5: 'G2',
+  Digit6: 'A2',
+  Digit7: 'B2',
+  Digit8: 'C3',
+  Digit9: 'D3',
+  Digit0: 'E3',
+  KeyQ: 'F3',
+  KeyW: 'G3',
+  KeyE: 'A3',
+  KeyR: 'B3',
+  KeyT: 'C4',
+  KeyY: 'D4',
+  KeyU: 'E4',
+  KeyI: 'F4',
+  KeyO: 'G4',
+  KeyP: 'A4',
+  KeyA: 'B4',
+  KeyS: 'C5',
+  KeyD: 'D5',
+  KeyF: 'E5',
+  KeyG: 'F5',
+  KeyH: 'G5',
+  KeyJ: 'A5',
+  KeyK: 'B5',
+  KeyL: 'C6',
+  KeyZ: 'D6',
+  KeyX: 'E6',
+  KeyC: 'F6',
+  KeyV: 'G6',
+  KeyB: 'A6',
+  KeyN: 'B6',
+  KeyM: 'C7'
+};
+
+const SHIFT_CODE_MAP: Record<string, string> = {
+  Digit1: 'C#2',
+  Digit2: 'D#2',
+  Digit4: 'F#2',
+  Digit5: 'G#2',
+  Digit6: 'A#2',
+  Digit8: 'C#3',
+  Digit9: 'D#3',
+  KeyQ: 'F#3',
+  KeyW: 'G#3',
+  KeyE: 'A#3',
+  KeyT: 'C#4',
+  KeyY: 'D#4',
+  KeyI: 'F#4',
+  KeyO: 'G#4',
+  KeyP: 'A#4',
+  KeyS: 'C#5',
+  KeyD: 'D#5',
+  KeyG: 'F#5',
+  KeyH: 'G#5',
+  KeyJ: 'A#5',
+  KeyL: 'C#6',
+  KeyZ: 'D#6',
+  KeyC: 'F#6',
+  KeyV: 'G#6',
+  KeyB: 'A#6'
+};
+
 export const getNoteFromKey = (e: KeyboardEvent): string | undefined => {
-  // First try the exact character (handles standard shift)
-  let note = VIRTUAL_PIANO_MAP[e.key];
+  const shiftedNote = e.shiftKey ? SHIFT_CODE_MAP[e.code] : undefined;
+  if (shiftedNote) return shiftedNote;
+
+  const baseNote = BASE_CODE_MAP[e.code];
+  if (baseNote) return baseNote;
+
+  const normalizedKey = e.key.length === 1 && !e.shiftKey ? e.key.toLowerCase() : e.key;
+  const note = VIRTUAL_PIANO_MAP[normalizedKey];
   if (note) return note;
 
-  // Fallback 1: try the lowercase version (caps lock on but no shift)
-  note = VIRTUAL_PIANO_MAP[e.key.toLowerCase()];
-  if (note) return note;
-
-  // Fallback 2: using e.code for physical location if shift is held but OS mapping is weird
-  // e.code format is usually "KeyA", "Digit1"
-  if (e.shiftKey) {
-    const baseChar = e.code.replace('Key', '').replace('Digit', '');
-
-    // Map digit physical keys to their shift characters for our map
-    const codeShiftMap: Record<string, string> = {
-      '1': '!', '2': '@', '4': '$', '5': '%', '6': '^', '8': '*', '9': '('
-    };
-
-    // Try uppercase letter
-    if (baseChar.length === 1 && /[A-Z]/.test(baseChar)) {
-      return VIRTUAL_PIANO_MAP[baseChar.toUpperCase()];
-    }
-
-    // Try shift digit
-    if (codeShiftMap[baseChar]) {
-      return VIRTUAL_PIANO_MAP[codeShiftMap[baseChar]];
-    }
-  }
+  const lowercaseNote = VIRTUAL_PIANO_MAP[e.key.toLowerCase()];
+  if (lowercaseNote) return lowercaseNote;
 
   return undefined;
 };

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { audioEngine } from '../../audio/PianoEngine';
-import { Play } from 'lucide-react';
+import { Box, PanelsTopLeft, Play, SlidersHorizontal, Sparkles } from 'lucide-react';
 
 interface OverlayProps {
     onStart: () => void;
@@ -22,6 +22,8 @@ interface OverlayProps {
     onSpikeColorModeChange: (val: 'reativo' | 'onda' | 'strobe' | 'rgb' | 'notas') => void;
     spikeColor: string;
     onSpikeColorChange: (val: string) => void;
+    visualMode: '2d' | '3d';
+    onToggleVisualMode: () => void;
     onUploadAudio: (url: string) => void;
 }
 
@@ -35,6 +37,7 @@ const Overlay: React.FC<OverlayProps> = ({
     explosionForce, onExplosionChange,
     spikeColorMode, onSpikeColorModeChange,
     spikeColor, onSpikeColorChange,
+    visualMode, onToggleVisualMode,
     onUploadAudio
 }) => {
     void onUploadAudio;
@@ -47,14 +50,25 @@ const Overlay: React.FC<OverlayProps> = ({
         return fallback;
     };
     const saveStored = (key: string, val: unknown) => localStorage.setItem(`vp_${key}`, JSON.stringify(val));
+    const query = new URLSearchParams(window.location.search);
 
     const [volume, setVolume] = useState<number>(() => getStored('volume', -5));
     const [reverb, setReverb] = useState<number>(() => getStored('reverb', 0.3));
     const [transpose, setTranspose] = useState<number>(() => getStored('transpose', 0));
+    const [studioMode, setStudioMode] = useState<boolean>(() => {
+        const queryStudio = query.get('studio');
+        if (queryStudio !== null) return queryStudio !== '0' && queryStudio !== 'false';
+        return getStored('studioMode', true);
+    });
+    const [starting, setStarting] = useState(false);
     const [soundfont, setSoundfont] = useState<string>(() => {
-        const sf = getStored('soundfont', audioEngine.currentSoundfont);
+        const sf = query.get('soundfont') ?? getStored('soundfont', audioEngine.currentSoundfont);
         if (sf.startsWith('custom-sf2-')) return 'salamander';
         return audioEngine.availableSoundfonts.some((available) => available.id === sf) ? sf : 'salamander';
+    });
+    const [filterPreset, setFilterPreset] = useState<string>(() => {
+        const preset = query.get('filter') ?? getStored('filterPreset', 'natural');
+        return audioEngine.availableFilterPresets.some((available) => available.id === preset) ? preset : 'natural';
     });
     const [sustainToggle, setSustainToggle] = useState<boolean>(() => getStored('sustainToggle', false));
 
@@ -83,13 +97,31 @@ const Overlay: React.FC<OverlayProps> = ({
     }, []);
 
     const handleStart = async () => {
-        // Sync loaded preferences to engine
-        audioEngine.setVolume(volume);
-        audioEngine.setReverb(reverb);
-        audioEngine.setTranspose(transpose);
-        audioEngine.setSustainToggle(sustainToggle);
-        await audioEngine.loadSoundfont(soundfont);
-        onStart();
+        if (starting) return;
+        setStarting(true);
+
+        try {
+            await audioEngine.startAudioContext();
+
+            // Sync loaded preferences to engine
+            audioEngine.setVolume(volume);
+            audioEngine.setReverb(reverb);
+            audioEngine.setTranspose(transpose);
+            audioEngine.setStudioMode(studioMode);
+            audioEngine.setFilterPreset(filterPreset);
+            audioEngine.setSustainToggle(sustainToggle);
+            await audioEngine.loadSoundfont(soundfont);
+            onStart();
+        } catch (err) {
+            console.error("Failed to start selected soundfont", err);
+            await audioEngine.loadSoundfont('hakurei-felt');
+            setSoundfont('hakurei-felt');
+            saveStored('soundfont', 'hakurei-felt');
+            alert("Error loading selected soundfont. Falling back to Hakurei Felt.");
+            onStart();
+        } finally {
+            setStarting(false);
+        }
     };
 
     const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -111,6 +143,21 @@ const Overlay: React.FC<OverlayProps> = ({
         setTranspose(val);
         audioEngine.setTranspose(val);
         saveStored('transpose', val);
+    };
+
+    const handleStudioToggle = () => {
+        const val = !studioMode;
+        setStudioMode(val);
+        audioEngine.setStudioMode(val);
+        saveStored('studioMode', val);
+    };
+
+    const handleFilterPresetChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        const val = e.target.value;
+        setFilterPreset(val);
+        audioEngine.setFilterPreset(val);
+        saveStored('filterPreset', val);
+        e.target.blur();
     };
 
     const handleSoundfontChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -154,9 +201,9 @@ const Overlay: React.FC<OverlayProps> = ({
 
     if (!started) {
         return (
-            <div className="ui-container" style={{ pointerEvents: 'auto', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <button className="btn" onClick={handleStart} style={{ padding: '1rem 2rem', fontSize: '1.25rem' }}>
-                    <Play size={24} /> Start Virtual Piano
+            <div className="ui-container start-screen">
+                <button className="btn" onClick={handleStart} disabled={starting} style={{ padding: '1rem 2rem', fontSize: '1.25rem' }}>
+                    <Play size={24} /> {starting ? 'Loading Piano...' : 'Start Virtual Piano'}
                 </button>
             </div>
         );
@@ -164,8 +211,8 @@ const Overlay: React.FC<OverlayProps> = ({
 
     return (
         <div className="ui-container">
-            <div className="panel" style={{ display: 'inline-flex', gap: '2rem' }}>
-                <div style={{ display: 'flex', gap: '1rem' }}>
+            <div className="panel control-panel">
+                <div className="control-section">
                     <div className="control-group">
                         <label>Volume</label>
                         <input
@@ -185,6 +232,18 @@ const Overlay: React.FC<OverlayProps> = ({
                         />
                     </div>
                     <div className="control-group">
+                        <label className="icon-label"><SlidersHorizontal size={12} /> Filter</label>
+                        <select
+                            value={filterPreset}
+                            onChange={handleFilterPresetChange}
+                            className="select-control filter-select"
+                        >
+                            {audioEngine.availableFilterPresets.map(preset => (
+                                <option key={preset.id} value={preset.id}>{preset.name}</option>
+                            ))}
+                        </select>
+                    </div>
+                    <div className="control-group">
                         <label>Transpose ({transpose > 0 ? `+${transpose}` : transpose})</label>
                         <input
                             type="range"
@@ -193,9 +252,24 @@ const Overlay: React.FC<OverlayProps> = ({
                             onChange={handleTransposeChange}
                         />
                     </div>
+                    <button
+                        className={`btn compact-toggle ${studioMode ? 'active' : ''}`}
+                        onClick={handleStudioToggle}
+                    >
+                        <Sparkles size={16} /> Studio
+                    </button>
+                    <button
+                        className={`btn compact-toggle ${visualMode === '2d' ? 'active' : ''}`}
+                        onClick={onToggleVisualMode}
+                    >
+                        {visualMode === '2d' ? <PanelsTopLeft size={16} /> : <Box size={16} />}
+                        {visualMode === '2d' ? '2D' : '3D'}
+                    </button>
                 </div>
 
-                <div style={{ borderLeft: '1px solid rgba(255,255,255,0.2)', paddingLeft: '2rem', display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                <div className="panel-divider" />
+
+                <div className="control-section instrument-section">
                     <div className="control-group" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                         <input
                             type="checkbox"
@@ -208,11 +282,11 @@ const Overlay: React.FC<OverlayProps> = ({
                     </div>
                     <div className="control-group">
                         <label>Instrument</label>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                        <div className="select-stack">
                             <select
                                 value={soundfont}
                                 onChange={handleSoundfontChange}
-                                style={{ background: 'rgba(0,0,0,0.5)', color: 'white', border: '1px solid rgba(255,255,255,0.2)', padding: '0.25rem', borderRadius: '4px' }}
+                                className="select-control"
                             >
                                 {audioEngine.availableSoundfonts.map(sf => (
                                     <option key={sf.id} value={sf.id}>{sf.name}</option>
@@ -221,7 +295,7 @@ const Overlay: React.FC<OverlayProps> = ({
                                     <option value={soundfont}>[Custom] {soundfont.replace('custom-sf2-', '')}</option>
                                 )}
                             </select>
-                            <label style={{ cursor: 'pointer', fontSize: '0.7rem', color: '#88f', textDecoration: 'underline' }}>
+                            <label className="file-link">
                                 + Load .SF2/.SF3 File
                                 <input
                                     type="file"
@@ -233,8 +307,8 @@ const Overlay: React.FC<OverlayProps> = ({
                         </div>
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                        <button className="btn" onClick={onToggleSculptureMode} style={{ backgroundColor: sculptureMode ? 'rgba(80, 80, 255, 0.5)' : undefined }}>
-                            {sculptureMode ? '🎹 Piano Mode' : '🎵 Sculpture Mode'}
+                        <button className={`btn compact-toggle ${sculptureMode ? 'active' : ''}`} onClick={onToggleSculptureMode}>
+                            {sculptureMode ? 'Piano Mode' : 'Sculpture'}
                         </button>
                     </div>
                     {sculptureMode && (

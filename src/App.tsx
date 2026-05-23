@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import Scene from './components/canvas/Scene';
 import Overlay from './components/ui/Overlay';
 import Notepad from './components/ui/Notepad';
+import PianoRoll2D from './components/piano-roll/PianoRoll2D';
 import SoundSculpture from './components/canvas/SoundSculpture/SoundSculpture';
 import SpikeSphere from './components/canvas/SoundSculpture/SpikeSphere';
 import ShootingStars from './components/canvas/SoundSculpture/ShootingStars';
@@ -19,6 +20,10 @@ function App() {
   const [started, setStarted] = useState(false);
   const [showNotepad, setShowNotepad] = useState(false);
   const [sculptureMode, setSculptureMode] = useState(false);
+  const [visualMode, setVisualMode] = useState<'2d' | '3d'>(() => {
+    const stored = localStorage.getItem('vp_visualMode');
+    return stored === '3d' ? '3d' : '2d';
+  });
   const [sculptureType, setSculptureType] = useState<'cubes' | 'sphere' | 'stars'>('cubes');
   const [bloomIntensity, setBloomIntensity] = useState(1.5);
   const [cameraDistance, setCameraDistance] = useState(30);
@@ -171,7 +176,6 @@ function App() {
     <>
       <Overlay
         onStart={async () => {
-          await audioEngine.startAudioContext();
           setStarted(true);
         }}
         started={started}
@@ -192,11 +196,26 @@ function App() {
         onSpikeColorModeChange={setSpikeColorMode}
         spikeColor={spikeColor}
         onSpikeColorChange={setSpikeColor}
+        visualMode={visualMode}
+        onToggleVisualMode={() => {
+          const next = visualMode === '2d' ? '3d' : '2d';
+          setVisualMode(next);
+          localStorage.setItem('vp_visualMode', next);
+        }}
         onUploadAudio={() => { }} // Now unused but kept for prop satisfaction or future use
       />
       {started && showNotepad && <Notepad onClose={() => setShowNotepad(false)} />}
 
-      {started && !sculptureMode && (
+      {started && !sculptureMode && visualMode === '2d' && (
+        <PianoRoll2D
+          activeNotes={activeNotes}
+          playedNotes={playedNotes}
+          onPlayNote={handlePlayNote}
+          onReleaseNote={handleReleaseNote}
+        />
+      )}
+
+      {started && !sculptureMode && visualMode === '3d' && (
         <Scene
           activeNotes={activeNotes}
           playedNotes={playedNotes}
